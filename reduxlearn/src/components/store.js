@@ -1,23 +1,11 @@
-import { createStore,combineReducers,compose } from 'redux'
+import { createStore,combineReducers,compose, applyMiddleware} from 'redux'
 import {colors} from './reducers'
 import sort  from './sort'
 import {v4} from 'uuid'
 
 
-export  const store  = createStore(
-    combineReducers({colors,sort}),
-    (localStorage['redux-store']) ?
-        JSON.parse(localStorage['redux-store']) : {}
-)
-
-console.log(store.getState())
-
-const unsbuscribLogger = store.subscribe(()=>{
-    localStorage['redux-store'] = JSON.stringify(store.getState())
-})
 
 
-unsbuscribLogger()
 console.log(JSON.stringify(localStorage['redux-store']))
 
 //action creator
@@ -57,7 +45,26 @@ const sortColors = sortedBy =>
             })
 
 
+const  logger = store  => next => action => {
+    let result
+    console.groupCollapsed("dispatching ", action.type)
+    console.log('prev state ', store.getState())
+    console.log('action ', action)
+    result = next(action)
+    console.log('next state ', store.getState())
+    console.groupEnd()
+    return result
+}
+const saver = store => next => action => {
+    let result = next(action)
+    localStorage['redux-store'] = JSON.stringify(store.getState())
+    return result
+}
 
+const store = applyMiddleware(logger,saver)(createStore)(combineReducers({colors,sort}),
+    (localStorage['redux-store']) ? JSON.parse(localStorage['redux-store']): {}
+
+)
 
 const populate = compose(
     () => store.dispatch(addColor("Big Blue", "#0000FF")),
@@ -78,3 +85,4 @@ console.log(store.getState())
 
 localStorage.clear()
 console.log(store.getState())
+export default store
